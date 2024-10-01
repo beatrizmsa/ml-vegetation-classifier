@@ -1,1 +1,1 @@
-# MachineLearning_AprendizagemAutom-tica
+# MachineLearning_AprendizagemAutomática
