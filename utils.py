@@ -97,7 +97,7 @@ def holdout_evaluation(data_results,models, X_train, X_test, y_train, y_test):
 
 
 def cross_validation_evaluation(data_results,models,X, y, k_splits):
-    kf = KFold(n_splits=k_splits)
+    kf = KFold(n_splits=k_splits, shuffle=True, random_state=42)
     for name, model in models.items():
 
         accuracy_scores = cross_val_score(model, X, y, cv=kf, scoring='accuracy', n_jobs=-1)
