@@ -31,7 +31,7 @@ def boxplot_visualization(data, columns, title):
     plt.show()
 
 def boxplot_by_type_visualization(data, columns, title):
-    n_cols = min(5, len(columns))
+    n_cols = min(4, len(columns))
     n_rows = (len(columns) + n_cols - 1) // n_cols
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
 
@@ -60,6 +60,27 @@ def barplot_visualization(data, columns, title):
         sns.barplot(x=label.index, y=label.values, ax=axes[i], color=colors[i])
         axes[i].set_xlabel(col)
         axes[i].set_ylabel('Frequency')
+        axes[i].tick_params(axis='x', rotation=45)
+
+    for j in range(len(columns), len(axes)):
+        axes[j].axis('off')
+
+    plt.tight_layout(rect=(0, 0, 1, 0.95))
+    plt.suptitle(title, fontsize=16)
+    plt.show()
+
+def crosstab_by_type_visualization(data, columns, title):
+    columns = [col for col in columns if col != 'Vegetation_Type']
+    n_cols = min(1, len(columns))
+    n_rows = (len(columns) + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(20, 10 * n_rows))
+
+    axes = axes.flatten()
+    for i, col in enumerate(columns):
+        crosstab_result = pd.crosstab(data[col], data['Vegetation_Type'])
+        crosstab_result.plot(kind='bar', ax=axes[i])
+        axes[i].set_xlabel('Vegetation Type')
+        axes[i].set_ylabel(col)
         axes[i].tick_params(axis='x', rotation=45)
 
     for j in range(len(columns), len(axes)):
