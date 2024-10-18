@@ -3,15 +3,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from sklearn.model_selection import train_test_split, KFold, cross_val_score, LeaveOneOut,cross_val_predict, cross_validate
+from sklearn.model_selection import train_test_split, KFold, cross_val_score, LeaveOneOut, cross_val_predict, \
+    cross_validate
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.utils import resample
 
-
-colors = ["#FFB3BA",   "#FFDFBA",   "#FFFFBA",   "#BAFFC9", "#BAE1FF",  "#FFB3E6",  "#B3FFDA",  "#CAB2FF", "#FFB3FF",
-          "#FFC1E3",  "#CCE5FF",  "#B2F0E6",  "#FFD1B2",  "#FFFF99",  "#D1C4E9",   "#FFE0B2",  "#F8BBD0",  "#DCEDC8"]
+colors = ["#FFB3BA", "#FFDFBA", "#FFFFBA", "#BAFFC9", "#BAE1FF", "#FFB3E6", "#B3FFDA", "#CAB2FF", "#FFB3FF",
+          "#FFC1E3", "#CCE5FF", "#B2F0E6", "#FFD1B2", "#FFFF99", "#D1C4E9", "#FFE0B2", "#F8BBD0", "#DCEDC8"]
 
 metrics = ['accuracy', 'precision_weighted', 'recall_weighted', 'f1_weighted']
+
 
 def boxplot_visualization(data, columns, title):
     n_cols = min(5, len(columns))
@@ -30,6 +31,7 @@ def boxplot_visualization(data, columns, title):
     plt.tight_layout(rect=(0, 0, 1, 0.95))
     plt.suptitle(title, fontsize=16)
     plt.show()
+
 
 def boxplot_by_type_visualization(data, columns, title):
     n_cols = min(4, len(columns))
@@ -70,6 +72,7 @@ def barplot_visualization(data, columns, title):
     plt.suptitle(title, fontsize=16)
     plt.show()
 
+
 def crosstab_by_type_visualization(data, columns, title):
     columns = [col for col in columns if col != 'Vegetation_Type']
     n_cols = min(1, len(columns))
@@ -91,8 +94,9 @@ def crosstab_by_type_visualization(data, columns, title):
     plt.suptitle(title, fontsize=16)
     plt.show()
 
+
 def confusion_matrix_visualization(data, title):
-    fig, axes = plt.subplots(data['Method'].nunique(),data['Model'].nunique(), figsize=(15,15))
+    fig, axes = plt.subplots(data['Method'].nunique(), data['Model'].nunique(), figsize=(15, 15))
 
     axes = axes.flatten()
     for i, row in data.iterrows():
@@ -105,7 +109,8 @@ def confusion_matrix_visualization(data, title):
     plt.suptitle(title, fontsize=16)
     plt.show()
 
-def add_results(data_results,model_name, method_name, accuracy, precision, recall, f1, std, cm):
+
+def add_results(data_results, model_name, method_name, accuracy, precision, recall, f1, std, cm):
     new_row = {
         'Model': model_name,
         'Method': method_name,
@@ -118,7 +123,8 @@ def add_results(data_results,model_name, method_name, accuracy, precision, recal
     }
     data_results.loc[len(data_results)] = new_row
 
-def holdout_evaluation(data_results,models, X_train, X_test, y_train, y_test):
+
+def holdout_evaluation(data_results, models, X_train, X_test, y_train, y_test):
     for name, model in models.items():
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
@@ -129,14 +135,14 @@ def holdout_evaluation(data_results,models, X_train, X_test, y_train, y_test):
         recall = report['weighted avg']['recall']
         f1 = report['weighted avg']['f1-score']
         cm = confusion_matrix(y_test, y_pred)
-        add_results(data_results,name, 'Holdout', accuracy, precision, recall, f1,'Nan', cm)
+        add_results(data_results, name, 'Holdout', accuracy, precision, recall, f1, 'Nan', cm)
 
 
-def cross_validation_evaluation(data_results,models,X, y, k_splits):
+def cross_validation_evaluation(data_results, models, X, y, k_splits):
     kf = KFold(n_splits=k_splits, shuffle=True, random_state=42)
     for name, model in models.items():
         scores = cross_validate(model, X, y, cv=kf,
-        scoring=metrics, n_jobs=-1)
+                                scoring=metrics, n_jobs=-1)
 
         accuracy = scores['test_accuracy'].mean()
         precision = scores['test_precision_weighted'].mean()
@@ -148,15 +154,16 @@ def cross_validation_evaluation(data_results,models,X, y, k_splits):
 
         cm = confusion_matrix(y, y_pred)
 
-        add_results(data_results,name, f'Cross-Validation with {k_splits}', accuracy, precision, recall, f1, std_dev, cm)
+        add_results(data_results, name, f'Cross-Validation with {k_splits}', accuracy, precision, recall, f1, std_dev,
+                    cm)
 
-def loocv_evaluation(data_results,models, X, y):
+
+def loocv_evaluation(data_results, models, X, y):
     cv = LeaveOneOut()
 
     for name, model in models.items():
-
         scores = cross_validate(model, X, y, cv=cv,
-        scoring=metrics, n_jobs=-1)
+                                scoring=metrics, n_jobs=-1)
 
         accuracy = scores['test_accuracy'].mean()
         precision = scores['test_precision_weighted'].mean()
@@ -168,13 +175,21 @@ def loocv_evaluation(data_results,models, X, y):
 
         cm = confusion_matrix(y, y_pred)
 
-        add_results(data_results,name, 'LeaveOneOut', accuracy, precision, recall, f1, std_dev, cm)
+        add_results(data_results, name, 'LeaveOneOut', accuracy, precision, recall, f1, std_dev, cm)
 
-def bootstrap_evaluation(data_results,models, X_train, y_train, X_test, y_test, n_iterations=100):
-    bootstrap_scores = {name: {'accuracy': [], 'precision': [], 'recall': [], 'f1': [], 'cm': []} for name in models.keys()}
 
+def bootstrap_evaluation(data_results, models, data, n_iterations=100):
+    bootstrap_scores = {name: {'accuracy': [], 'precision': [], 'recall': [], 'f1': [], 'cm': []} for name in
+                        models.keys()}
+
+    X = data.drop(columns=['Vegetation_Type', 'Soil_Type', 'Wilderness_Area', 'Vegetation_Type_Enc', 'Id'])
+    y = data['Vegetation_Type_Enc']
     for i in range(n_iterations):
-        X_resampled, y_resampled = resample(X_train, y_train, n_samples=len(X_train), replace=True)
+        X_resampled, y_resampled = resample(X, y, n_samples=int(0.7 * len(X)), replace=True)
+        resampled = pd.concat([X_resampled, y_resampled], axis=1)
+        test = data[~data.index.isin(resampled.index)]
+        X_test = test.drop(columns=['Vegetation_Type_Enc'])
+        y_test = test['Vegetation_Type_Enc']
 
         for name, model in models.items():
             model.fit(X_resampled, y_resampled)
@@ -191,8 +206,8 @@ def bootstrap_evaluation(data_results,models, X_train, y_train, X_test, y_test, 
         accuracy = np.mean(metrics['accuracy'])
         precision = np.mean(metrics['precision'])
         recall = np.mean(metrics['recall'])
-        f1= np.mean(metrics['f1'])
+        f1 = np.mean(metrics['f1'])
         std_dev = np.std(metrics['accuracy'])
         cm = np.sum(metrics['cm'], axis=0)
 
-        add_results(data_results,name, 'Bootstrap', accuracy, precision, recall, f1, std_dev,cm)
+        add_results(data_results, name, 'Bootstrap', accuracy, precision, recall, f1, std_dev, cm)
