@@ -236,43 +236,26 @@ def loocv_evaluation(data_results, models, X, y, suffix=""):
         )
 
 
-def bootstrap_evaluation(data_results, models, data, n_iterations=100, suffix=""):
+def bootstrap_evaluation(data_results, models, X, y , n_iterations=100, suffix=""):
     bootstrap_scores = {
         name: {"accuracy": [], "precision": [], "recall": [], "f1": [], "cm": []}
         for name in models.keys()
     }
 
-    X = data.drop(
-        columns=[
-            "Vegetation_Type",
-            "Soil_Type",
-            "Wilderness_Area",
-            "Vegetation_Type_Enc",
-            "Id",
-        ]
-    )
-    y = data["Vegetation_Type_Enc"]
     for i in range(n_iterations):
-        scaler = StandardScaler()
+
         X_resampled, y_resampled = resample(
-            X, y, n_samples=int(0.7 * len(X)), replace=True
+            X, y, n_samples=int(0.7 * len(X)), replace=True, random_state=42
         )
+        test_idx = ~X.index.isin(X_resampled.index)
 
-        resampled = pd.concat([X_resampled, y_resampled], axis=1)
-        test = data[~data.index.isin(resampled.index)]
+        X_test = X.loc[test_idx]
+        y_test = y.loc[test_idx]
 
-        X_test = test.drop(
-            columns=[
-                "Vegetation_Type",
-                "Soil_Type",
-                "Wilderness_Area",
-                "Vegetation_Type_Enc",
-                "Id",
-            ]
-        )
+        scaler = StandardScaler()
         X_resampled = scaler.fit_transform(X_resampled)
         X_test = scaler.transform(X_test)
-        y_test = test["Vegetation_Type_Enc"]
+
 
         for name, model in models.items():
             model.fit(X_resampled, y_resampled)
@@ -311,8 +294,9 @@ def bootstrap_evaluation(data_results, models, data, n_iterations=100, suffix=""
 def apply_ridge_regression(names, X_train, y_train, X_test, y_test):
     cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=1)
     ridge = RidgeCV(
-        alphas=np.arange(0.1, 10, 0.1), cv=cv, scoring="neg_mean_absolute_error"
+        alphas=np.arange(0.1, 10, 0.1), cv=cv, scoring='f1_weighted'
     )
+    print(ridge)
 
     ridge.fit(X_train, y_train)
     ridge_reg_y_pred = ridge.predict(X_test)
@@ -325,6 +309,11 @@ def apply_ridge_regression(names, X_train, y_train, X_test, y_test):
     plt.xlabel("Features")
     plt.ylabel("Importance")
     plt.show()
+
+    important_features = [name for coef, name in zip(ridge.coef_, names) if abs(coef) > 0.1]
+    print("Columns with coefficients above 0.1:", important_features)
+    important_features = [name for coef, name in zip(ridge.coef_, names) if abs(coef) > 0.4]
+    print("Columns with coefficients below 0.4:", important_features)
 
     print(
         "Ridge Regression Model RMSE is: ",
@@ -363,7 +352,7 @@ def apply_lasso(names, X_train, y_train, X_test, y_test):
 
 
 def apply_elastic_net(names, X_train, y_train, X_test, y_test):
-    enet = ElasticNetCV(alphas=np.arange(0.1, 10, 0.1), cv=10)
+    enet = ElasticNetCV(alphas=np.arange(0.1, 10, 0.1), cv=10, l1_ratio=0.5)
     enet.fit(X_train, y_train)
     enet_reg_y_pred = enet.predict(X_test)
 
