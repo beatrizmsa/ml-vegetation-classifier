@@ -101,6 +101,24 @@ def barplot_visualization(data, columns, title):
     plt.show()
 
 
+def barplot_correlation_visualization(data, title):
+    plt.figure(figsize=(15, 10))
+    sns.barplot(x=data.index, y=data.values, palette='viridis')
+    plt.title(title)
+    plt.ylabel('Correlation Coefficient')
+    plt.xlabel('Features')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+
+
+def heatmap_visualization(data, title):
+    plt.figure(figsize=(15, 15))
+    sns.heatmap(data.corr(numeric_only=True), cmap="coolwarm", annot=True, fmt=".2f")
+    plt.suptitle(title, fontsize=16)
+    plt.show()
+
+
 def crosstab_by_type_visualization(data, columns, title):
     columns = [col for col in columns if col != "Vegetation_Type"]
     n_cols = min(1, len(columns))
@@ -236,7 +254,7 @@ def loocv_evaluation(data_results, models, X, y, suffix=""):
         )
 
 
-def bootstrap_evaluation(data_results, models, X, y , n_iterations=100, suffix=""):
+def bootstrap_evaluation(data_results, models, X, y, n_iterations=100, suffix=""):
     bootstrap_scores = {
         name: {"accuracy": [], "precision": [], "recall": [], "f1": [], "cm": []}
         for name in models.keys()
@@ -245,7 +263,7 @@ def bootstrap_evaluation(data_results, models, X, y , n_iterations=100, suffix="
     for i in range(n_iterations):
 
         X_resampled, y_resampled = resample(
-            X, y, n_samples=int(0.7 * len(X)), replace=True, random_state=42
+            X, y, n_samples=int(0.7 * len(X)), replace=True, random_state=42+i
         )
         test_idx = ~X.index.isin(X_resampled.index)
 
@@ -255,7 +273,6 @@ def bootstrap_evaluation(data_results, models, X, y , n_iterations=100, suffix="
         scaler = StandardScaler()
         X_resampled = scaler.fit_transform(X_resampled)
         X_test = scaler.transform(X_test)
-
 
         for name, model in models.items():
             model.fit(X_resampled, y_resampled)
@@ -291,12 +308,11 @@ def bootstrap_evaluation(data_results, models, X, y , n_iterations=100, suffix="
         )
 
 
-def apply_ridge_regression(names, X_train, y_train, X_test, y_test):
-    cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=1)
+def apply_ridge(names, X_train, y_train, X_test, y_test):
+    cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=42)
     ridge = RidgeCV(
         alphas=np.arange(0.1, 10, 0.1), cv=cv, scoring='f1_weighted'
     )
-    print(ridge)
 
     ridge.fit(X_train, y_train)
     ridge_reg_y_pred = ridge.predict(X_test)
@@ -310,11 +326,6 @@ def apply_ridge_regression(names, X_train, y_train, X_test, y_test):
     plt.ylabel("Importance")
     plt.show()
 
-    important_features = [name for coef, name in zip(ridge.coef_, names) if abs(coef) > 0.1]
-    print("Columns with coefficients above 0.1:", important_features)
-    important_features = [name for coef, name in zip(ridge.coef_, names) if abs(coef) > 0.4]
-    print("Columns with coefficients below 0.4:", important_features)
-
     print(
         "Ridge Regression Model RMSE is: ",
         np.sqrt(mean_squared_error(y_test, ridge_reg_y_pred)),
@@ -326,7 +337,7 @@ def apply_ridge_regression(names, X_train, y_train, X_test, y_test):
 
 
 def apply_lasso(names, X_train, y_train, X_test, y_test):
-    cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=1)
+    cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=42)
     lasso = LassoCV(alphas=np.arange(0.1, 10, 0.1), cv=cv, tol=1)
 
     lasso.fit(X_train, y_train)
