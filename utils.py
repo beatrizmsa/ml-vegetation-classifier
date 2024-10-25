@@ -5,14 +5,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 from sklearn.discriminant_analysis import StandardScaler
-from sklearn.linear_model import ElasticNetCV, LassoCV, RidgeCV
-from sklearn.model_selection import (
-    KFold,
-    LeaveOneOut,
-    RepeatedKFold,
-    cross_val_predict,
-    cross_validate,
-)
+from sklearn.model_selection import KFold,LeaveOneOut,RepeatedKFold,cross_val_predict,cross_validate,GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error
 from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
@@ -145,9 +138,7 @@ def crosstab_by_type_visualization(data, columns, title):
 
 
 def confusion_matrix_visualization(data, title):
-    _, axes = plt.subplots(
-        data["Method"].nunique(), data["Model"].nunique(), figsize=(15, 15)
-    )
+    fig, axes = plt.subplots(int(np.ceil(len(data) / 3)), 3, figsize=(15, 15))
 
     axes = axes.flatten()
     for i, row in data.iterrows():
@@ -157,6 +148,9 @@ def confusion_matrix_visualization(data, title):
         axes[i].set_title(f'{row["Model"]} using {row["Method"]}')
         axes[i].set_xlabel("Predicted Label")
         axes[i].set_ylabel("True Label")
+
+    for j in range(len(data), len(axes)):
+        axes[j].axis("off")
 
     plt.tight_layout(rect=(0, 0, 1, 0.95))
     plt.suptitle(title, fontsize=16)
@@ -362,113 +356,3 @@ def bootstrap_evaluation(data_results, models, X, y, n_iterations=100, suffix=""
             std_dev,
             cm,
         )
-
-
-def apply_ridge(names, X_train, y_train, X_test, y_test):
-    # Initializa K-fold cross validator
-    cv = RepeatedKFold(n_splits=5, n_repeats=2, random_state=42)
-
-    # Initialize Ridge Regression model with built cross validator
-    ridge = RidgeCV(
-        alphas=np.arange(0.1, 10, 0.1), cv=cv, scoring='f1_weighted'
-    )
-
-    # Train model with the previously standardize training data
-    ridge.fit(X_train, y_train)
-
-    # Predict target variable with the previously standardized test data
-    ridge_reg_y_pred = ridge.predict(X_test)
-
-    # Print the metrics for the ridge model
-    print("Ridge Tuning Parameter: ", (ridge.alpha_))
-    print("Ridge Model Intercept: ", (ridge.intercept_))
-
-    # Plot the coeficients with their respective columns
-    plt.bar(names, ridge.coef_)
-    plt.xticks(rotation=90)
-    plt.grid()
-    plt.title("Feature Selection Based on Ridge")
-    plt.xlabel("Features")
-    plt.ylabel("Importance")
-    plt.show()
-
-    print(
-        "Ridge Regression Model RMSE is: ",
-        np.sqrt(mean_squared_error(y_test, ridge_reg_y_pred)),
-    )
-    print(
-        "Ridge Regression Model Training Score: ", ridge.score(X_train, y_train) * 100
-    )
-    print("Ridge Regression Model Testing Score: ", ridge.score(X_test, y_test) * 100)
-
-
-def apply_lasso(names, X_train, y_train, X_test, y_test):
-    # Initialize K-fold cross validator
-    cv = RepeatedKFold(n_splits=5, n_repeats=2, random_state=42)
-
-    # Initialize Lasso model with built cross validator
-    lasso = LassoCV(alphas=np.arange(0.1, 10, 0.1), cv=cv, tol=1)
-
-    # Train model with the previously standardize training data
-    lasso.fit(X_train, y_train)
-
-    # Predict target variable with the previously standardized test data
-    lasso_reg_y_pred = lasso.predict(X_test)
-
-    # Print the metrics for the ridge model
-    print("Lasso tuning parameter:", (lasso.alpha_))
-    print("Lassso model intercept:", (lasso.intercept_))
-
-    # Plot the coeficients with their respective columns
-    plt.bar(names, lasso.coef_)
-    plt.xticks(rotation=90)
-    plt.grid()
-    plt.title("Feature Selection Based on Lasso")
-    plt.xlabel("Features")
-    plt.ylabel("Importance")
-    plt.show()
-
-    print(
-        "Lasso Regression Model RMSE is: ",
-        np.sqrt(mean_squared_error(y_test, lasso_reg_y_pred)),
-    )
-    print(
-        "Lasso Regression Model Training Score: ", lasso.score(X_train, y_train) * 100
-    )
-    print("Lasso Regression Model Testing Score: ", lasso.score(X_test, y_test) * 100)
-
-
-def apply_elastic_net(names, X_train, y_train, X_test, y_test):
-    # Initialize Elastic Net model with built cross validator
-    enet = ElasticNetCV(alphas=np.arange(0.1, 10, 0.1), cv=10, l1_ratio=0.5)
-
-    # Train model with the previously standardize training data
-    enet.fit(X_train, y_train)
-
-    # Predict target variable with the previously standardized test data
-    enet_reg_y_pred = enet.predict(X_test)
-
-    # Print the metrics for the elastic net model
-    print("ElasticNet tuning parameter:", (enet.alpha_))
-    print("ElasticNet model intercept:", (enet.intercept_))
-    
-    # Plot the coeficients with their respective columns
-    plt.bar(names, enet.coef_)
-    plt.xticks(rotation=90)
-    plt.grid()
-    plt.title("Feature Selection Based on Elastic Net")
-    plt.xlabel("Features")
-    plt.ylabel("Importance")
-    plt.show()
-    
-    print(
-        "ElasticNet Regression Model RMSE is: ",
-        np.sqrt(mean_squared_error(y_test, enet_reg_y_pred)),
-    )
-    print(
-        "ElasticNet Regression Model Training Score: ",
-        enet.score(X_train, y_train) * 100,
-    )
-    print(
-        "ElasticNet Regression Model Testing Score: ", enet.score(X_test, y_test) * 100
-    )
