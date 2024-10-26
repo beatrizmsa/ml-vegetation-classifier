@@ -1,5 +1,3 @@
-# Recebe um dataset e faz alteracoes e avalia cada
-# dataset com diversos modelos printa os resultados
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
@@ -356,3 +354,67 @@ def bootstrap_evaluation(data_results, models, X, y, n_iterations=100, suffix=""
             std_dev,
             cm,
         )
+
+
+def best_feature_grid_search_visualization(X_train, y_train, parameters, model, result):
+    #scaler = StandardScaler()
+    #X_train = scaler.fit_transform(X_train)
+
+    # initialize the GridSeachCV method
+    grid = GridSearchCV(model, parameters, cv=KFold(n_splits=5, shuffle=True, random_state=42))
+
+    # fit with the training data
+    grid.fit(X_train, y_train)
+
+    # substitute the score with a better one
+    if result['C']:
+        if grid.best_score_ >= result['score']:
+            result['C'] = grid.best_params_['C']
+            result['score'] = grid.best_score_
+            # store "l1_ratio" parameter for the Elastic Net method
+            if 'l1_ratio' in parameters.keys():
+                result['l1_ratio'] = grid.best_params_['l1_ratio']
+
+    # initialize the C parameters for the first time
+    else:
+        result['C'] = grid.best_params_['C']
+        result['score'] = grid.best_score_
+        # store "l1_ratio" parameter for the Elastic Net method
+        if 'l1_ratio' in parameters.keys():
+            result['l1_ratio'] = grid.best_params_['l1_ratio']
+
+    # store all the scores and parameters
+    scores = grid.cv_results_['mean_test_score']
+    params = grid.cv_results_['params']
+
+    # create dataframe with all the results and plot the graph
+    results_df = pd.DataFrame(params)
+    results_df['mean_test_score'] = scores
+    plt.figure(figsize=(10, 6))
+    plt.plot(results_df['C'], results_df['mean_test_score'], marker='o')
+    plt.title('Score vs. C')
+    plt.xlabel('C')
+    plt.ylabel('Mean Test Score')
+    plt.grid()
+    plt.show()
+
+    print("Best parameters:", grid.best_params_)
+    print("Best Score:", grid.best_score_)
+
+    return result
+
+
+def best_feature_grid_search(columns_name, X_train, y_train, parameters, model):
+    # initialize the GridSeachCV method
+    grid = GridSearchCV(model, parameters, cv=KFold(n_splits=5, shuffle=True, random_state=42))
+
+    # fit with the training data
+    grid.fit(X_train, y_train)
+    coef = grid.best_estimator_.coef_[0]
+
+    print("Best parameters:", grid.best_params_)
+
+    # print the features and the respective coefficients
+    print("Feature Coefficients:")
+    print(pd.DataFrame({'Feature': columns_name, 'Coefficient': coef}))
+    return grid.best_params_
