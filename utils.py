@@ -171,29 +171,56 @@ def add_results(
     data_results.loc[len(data_results)] = new_row
 
 
-def holdout_evaluation(data_results, models, X_train, X_test, y_train, y_test, suffix=""):
-    # Iterate through the different models that we are going to validate
-    for name, model in models.items():
-        # Use training data to train the current model
-        model.fit(X_train, y_train)
+def holdout_evaluation(data_results, models, X,y, suffix=""):
+    holdout_scores = {
+        name: {"accuracy": [], "precision": [], "recall": [], "f1": [], "cm": []}
+        for name in models.keys()
+    }
+    for i in range(10):
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42 + i)
+        scaller = StandardScaler()
+        X_train = scaller.fit_transform(X_train)
+        X_test = scaller.transform(X_test)
+        for name, model in models.items():
+            # Use training data to train the current model
+            model.fit(X_train, y_train)
 
-        # Predict the target variable with the trained model based on the test data
-        y_pred = model.predict(X_test)
+            # Predict the target variable with the trained model based on the test data
+            y_pred = model.predict(X_test)
 
-        # Create a classification report with the predict target variable
-        # and the actual values
-        report = classification_report(y_test, y_pred, output_dict=True)
+            # Create a classification report with the predict target variable
+            # and the actual values
+            report = classification_report(y_test, y_pred, output_dict=True)
 
-        # Extract chosen metrics from the classification report
-        accuracy = report["accuracy"]
-        precision = report["weighted avg"]["precision"]
-        recall = report["weighted avg"]["recall"]
-        f1 = report["weighted avg"]["f1-score"]
-        cm = confusion_matrix(y_test, y_pred)
+            # Extract chosen metrics from the classification report
+            holdout_scores[name]["accuracy"].append(report["accuracy"])
+            holdout_scores[name]["precision"].append(report["weighted avg"]["precision"])
+            holdout_scores[name]["recall"].append(report["weighted avg"]["recall"])
+            holdout_scores[name]["f1"].append(report["weighted avg"]["f1-score"])
+            holdout_scores[name]["cm"].append(confusion_matrix(y_test, y_pred))
 
-        # Add results to the results data frame
+    for name, metrics in holdout_scores.items():
+        # Calculate the mean of each metric for the current models
+        accuracy = np.mean(metrics["accuracy"])
+        precision = np.mean(metrics["precision"])
+        recall = np.mean(metrics["recall"])
+        f1 = np.mean(metrics["f1"])
+        std_dev = np.std(metrics["accuracy"])
+
+        # Sum the scores of the confusion matrices
+        cm = np.sum(metrics["cm"], axis=0)
+
+        # Add the results to the data results data frame
         add_results(
-            data_results, name, "Holdout" + suffix, accuracy, precision, recall, f1, "Nan", cm
+            data_results,
+            name,
+            "Houldout" + suffix,
+            accuracy,
+            precision,
+            recall,
+            f1,
+            std_dev,
+            cm,
         )
 
 
@@ -292,7 +319,7 @@ def bootstrap_evaluation(data_results, models, X, y, n_iterations=100, suffix=""
     for i in range(n_iterations):
         # Resample the data with bootstrapping strategy
         X_resampled, y_resampled = resample(
-            X, y, n_samples=int(0.7 * len(X)), replace=True, random_state=42+i
+            X, y, n_samples=int(len(X)), replace=True, random_state=42+i
         )
 
         # Get the id's of the data that was not chosen the resampling step
