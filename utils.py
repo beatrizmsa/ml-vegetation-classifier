@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 from sklearn.discriminant_analysis import StandardScaler
-from sklearn.model_selection import KFold,LeaveOneOut,RepeatedKFold,cross_val_predict,cross_validate,GridSearchCV
+from sklearn.model_selection import KFold,LeaveOneOut,RepeatedKFold,cross_val_predict,cross_validate,GridSearchCV, train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error
 from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
@@ -45,7 +45,6 @@ def boxplot_visualization(data, columns, title):
         sns.boxplot(data=data, y=col, ax=axes[i], color=colors[i])
         axes[i].set_title(col)
         axes[i].set_ylabel("")
-
 
     for j in range(len(columns), len(axes)):
         axes[j].axis("off")
@@ -322,7 +321,7 @@ def bootstrap_evaluation(data_results, models, X, y, n_iterations=100, suffix=""
             X, y, n_samples=int(len(X)), replace=True, random_state=42+i
         )
 
-        # Get the id's of the data that was not chosen the resampling step
+        # Get the id's of the data that was not chosen in the resampling step
         test_idx = ~X.index.isin(X_resampled.index)
 
         # Create the test data using the id's from the previous step
