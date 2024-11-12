@@ -3,10 +3,11 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 from sklearn.discriminant_analysis import StandardScaler
-from sklearn.model_selection import KFold,LeaveOneOut,RepeatedKFold,cross_val_predict,cross_validate,GridSearchCV, train_test_split
+from sklearn.model_selection import KFold, LeaveOneOut, RepeatedKFold, cross_val_predict, cross_validate, GridSearchCV, train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error
 from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
+from pygam import LogisticGAM, s, f, l
 
 
 colors = [
@@ -170,7 +171,7 @@ def add_results(
     data_results.loc[len(data_results)] = new_row
 
 
-def holdout_evaluation(data_results, models, X,y, suffix=""):
+def holdout_evaluation(data_results, models, X, y, suffix=""):
     holdout_scores = {
         name: {"accuracy": [], "precision": [], "recall": [], "f1": [], "cm": []}
         for name in models.keys()
@@ -328,7 +329,6 @@ def bootstrap_evaluation(data_results, models, X, y, n_iterations=100, suffix=""
         X_test = X.loc[test_idx]
         y_test = y.loc[test_idx]
 
-
         scaler = StandardScaler()
 
         # Standardize the data using the StandardScaler
@@ -383,8 +383,6 @@ def bootstrap_evaluation(data_results, models, X, y, n_iterations=100, suffix=""
 
 
 def best_feature_grid_search_visualization(X_train, y_train, parameters, model, result):
-    #scaler = StandardScaler()
-    #X_train = scaler.fit_transform(X_train)
 
     # initialize the GridSeachCV method
     grid = GridSearchCV(model, parameters, cv=KFold(n_splits=5, shuffle=True, random_state=42))
@@ -444,3 +442,43 @@ def best_feature_grid_search(columns_name, X_train, y_train, parameters, model):
     print("Feature Coefficients:")
     print(pd.DataFrame({'Feature': columns_name, 'Coefficient': coef}))
     return grid.best_params_
+
+
+def gam_gridsearch(X_data, y_data, configs):
+    # Prepare for cross-validation with 10 folds
+    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    best_score = 0
+    best_scores = []
+    best_model = None
+
+    # Iterate over each configuration
+    for config in configs:
+        cv_scores = []
+
+        # Manually iterate over each fold in KFold
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X_data[train_index], X_data[test_index]
+            y_train, y_test = y_data[train_index], y_data[test_index]
+
+            gam = LogisticGAM(config)
+            # Fit the model on the training data
+            gam.fit(X_train, y_train)
+
+            # Evaluate accuracy on the test data
+            accuracy = gam.accuracy(X_test, y_test)
+            cv_scores.append(accuracy)
+
+        # Calculate mean accuracy for the current configuration
+        mean_score = np.mean(cv_scores)
+
+        # Update the best model if this configuration has a higher mean accuracy
+        if mean_score > best_score:
+            best_score = mean_score
+            best_model = gam
+            best_scores = cv_scores
+
+    # Output the best model configuration
+    print("Best Model Configuration:", best_model.terms)
+    print(f"Cross-validation accuracy scores: {best_scores}")
+    print(f"Best Mean Accuracy: {best_score:.4f}")
+    print(f"Standard deviation of accuracy: {np.std(best_scores):.4f}")
