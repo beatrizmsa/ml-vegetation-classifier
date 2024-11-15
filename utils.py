@@ -4,7 +4,7 @@ import numpy as np
 import seaborn as sns
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.model_selection import KFold, LeaveOneOut, RepeatedKFold, cross_val_predict, cross_validate, GridSearchCV, train_test_split
-from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error
+from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error, f1_score
 from sklearn.pipeline import Pipeline
 from sklearn.utils import resample
 from pygam import LogisticGAM, s, f, l
@@ -456,7 +456,7 @@ def gam_gridsearch(X_data, y_data, configs):
         cv_scores = []
 
         # Manually iterate over each fold in KFold
-        for train_index, test_index in kf.split(X):
+        for train_index, test_index in kf.split(X_data):
             X_train, X_test = X_data[train_index], X_data[test_index]
             y_train, y_test = y_data[train_index], y_data[test_index]
 
@@ -464,14 +464,15 @@ def gam_gridsearch(X_data, y_data, configs):
             # Fit the model on the training data
             gam.fit(X_train, y_train)
 
-            # Evaluate accuracy on the test data
-            accuracy = gam.accuracy(X_test, y_test)
-            cv_scores.append(accuracy)
+            # Predict on the test data and evaluate F1 score
+            y_pred = gam.predict(X_test)
+            f1 = f1_score(y_test, y_pred)
+            cv_scores.append(f1)
 
-        # Calculate mean accuracy for the current configuration
+        # Calculate mean F1 score for the current configuration
         mean_score = np.mean(cv_scores)
 
-        # Update the best model if this configuration has a higher mean accuracy
+        # Update the best model if this configuration has a higher mean F1 score
         if mean_score > best_score:
             best_score = mean_score
             best_model = gam
@@ -479,6 +480,7 @@ def gam_gridsearch(X_data, y_data, configs):
 
     # Output the best model configuration
     print("Best Model Configuration:", best_model.terms)
-    print(f"Cross-validation accuracy scores: {best_scores}")
-    print(f"Best Mean Accuracy: {best_score:.4f}")
-    print(f"Standard deviation of accuracy: {np.std(best_scores):.4f}")
+    print(f"Cross-validation F1 scores: {best_scores}")
+    print(f"Best Mean F1 Score: {best_score:.4f}")
+    print(f"Standard deviation of F1 score: {np.std(best_scores):.4f}")
+
