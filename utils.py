@@ -6,6 +6,7 @@ from sklearn.discriminant_analysis import StandardScaler
 from sklearn.model_selection import KFold, LeaveOneOut, RepeatedKFold, cross_val_predict, cross_validate, GridSearchCV, train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error, f1_score
 from sklearn.pipeline import Pipeline
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils import resample
 from pygam import LogisticGAM, s, f, l
 
@@ -483,4 +484,43 @@ def gam_gridsearch(X_data, y_data, configs):
     print(f"Cross-validation F1 scores: {best_scores}")
     print(f"Best Mean F1 Score: {best_score:.4f}")
     print(f"Standard deviation of F1 score: {np.std(best_scores):.4f}")
+
+
+def decision_tree(X_datasets: dict, y_data):
+    for name, X_data in X_datasets.items():
+        dt = DecisionTreeClassifier(random_state=42)
+
+        X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.3, random_state=42)
+
+        dt.fit(X_train, y_train)
+
+        score = dt.score(X_test, y_test)
+
+        print('{} Test set score: {:.4f}'.format(name, score))
+
+
+
+def decision_tree_grid_search(X_data, y_data, params):
+    dt = DecisionTreeClassifier()
+
+    gs = GridSearchCV(
+        dt,
+        params,
+        cv=5,
+        scoring='accuracy'
+    )
+
+    X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.3, random_state=42)
+
+    gs.fit(X_train, y_train)
+
+    print("Best Hyperparameters:", gs.best_params_)
+    print("Best Accuracy:", gs.best_score_)
+    best_model = gs.best_estimator_
+
+    print('Training set score: {:.4f}'.format(best_model.score(X_train, y_train)))
+
+    best_model_score = best_model.score(X_test, y_test)
+
+    print('Test set score: {:.4f}'.format(best_model_score))
 
