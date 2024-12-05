@@ -5,6 +5,7 @@ import seaborn as sns
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.model_selection import KFold, LeaveOneOut, RepeatedKFold, cross_val_predict, cross_validate, GridSearchCV, train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error, f1_score
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils import resample
@@ -485,6 +486,23 @@ def gam_gridsearch(X_data, y_data, configs):
     print(f"Best Mean F1 Score: {best_score:.4f}")
     print(f"Standard deviation of F1 score: {np.std(best_scores):.4f}")
 
+### Second Part
+
+def get_feature_importances_text(column_names, importances):
+    features = list(zip(column_names, importances))
+
+    features_sorted = sorted(features, key=lambda x: x[1], reverse=True)
+    print("Feature Importances:")
+    for feature, importance in features_sorted:
+        print(f"- {feature}: {importance:.3f}")
+
+
+def best_random_forest(X_train, y_train, param_rfm):
+    rfm = RandomForestClassifier()
+
+    rfm_gs = GridSearchCV(rfm, param_rfm, cv=5, scoring='accuracy')
+    rfm_gs.fit(X_train, y_train)
+    print("Best parameters", rfm_gs.best_params_)
 
 def decision_tree(X_datasets: dict, y_data):
     for name, X_data in X_datasets.items():
