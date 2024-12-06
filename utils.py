@@ -1,7 +1,9 @@
+import graphviz
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
+from sklearn.calibration import LabelEncoder
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.model_selection import KFold, LeaveOneOut, RepeatedKFold, cross_val_predict, cross_validate, GridSearchCV, train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, mean_squared_error, f1_score
@@ -9,6 +11,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils import resample
+from sklearn import tree
 from pygam import LogisticGAM, s, f, l
 
 
@@ -504,28 +507,29 @@ def best_random_forest(X_train, y_train, param_rfm):
     rfm_gs.fit(X_train, y_train)
     print("Best parameters", rfm_gs.best_params_)
 
-def decision_tree(X_datasets: dict, y_data):
-    for name, X_data in X_datasets.items():
-        dt = DecisionTreeClassifier(random_state=42)
+def decision_tree(X_data, y_data):
+    dt = DecisionTreeClassifier(random_state=42)
 
-        X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.3, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.3, random_state=42)
 
-        dt.fit(X_train, y_train)
+    dt.fit(X_train, y_train)
 
-        score = dt.score(X_test, y_test)
+    print("Max depth:", dt.tree_.max_depth)
+    print("Number of nodes:", dt.tree_.node_count)
 
-        print('{} Test set score: {:.4f}'.format(name, score))
+    print('Training set score: {:.4f}'.format(dt.score(X_train, y_train)))
+
+    print('Test set score: {:.4f}'.format(dt.score(X_test, y_test)))
 
 
-
-def decision_tree_grid_search(X_data, y_data, params):
+def decision_tree_grid_search(X_data, y_data, params, generate_tree=False):
     dt = DecisionTreeClassifier()
 
     gs = GridSearchCV(
         dt,
         params,
         cv=5,
-        scoring='accuracy'
+        scoring='accuracy',
     )
 
     X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.3, random_state=42)
@@ -533,7 +537,6 @@ def decision_tree_grid_search(X_data, y_data, params):
     gs.fit(X_train, y_train)
 
     print("Best Hyperparameters:", gs.best_params_)
-    print("Best Accuracy:", gs.best_score_)
     best_model = gs.best_estimator_
 
     print('Training set score: {:.4f}'.format(best_model.score(X_train, y_train)))
@@ -542,3 +545,15 @@ def decision_tree_grid_search(X_data, y_data, params):
 
     print('Test set score: {:.4f}'.format(best_model_score))
 
+    if generate_tree:
+        dot_data = tree.export_graphviz(
+            best_model,
+            out_file=None,
+            feature_names=X_train.columns,
+            class_names=np.array(sorted(y_train.unique())).astype('str').tolist(),
+            filled=True,
+        )
+        
+        graph = graphviz.Source(dot_data)
+
+        return graph
