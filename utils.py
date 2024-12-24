@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from sklearn.base import accuracy_score
 from sklearn.calibration import LabelEncoder
 from sklearn.discriminant_analysis import StandardScaler
 from sklearn.model_selection import KFold, LeaveOneOut, RepeatedKFold, cross_val_predict, cross_validate, GridSearchCV, train_test_split
@@ -558,71 +557,3 @@ def decision_tree_grid_search(X_data, y_data, params, generate_tree=False):
         graph = graphviz.Source(dot_data)
 
         return graph
-
-
-def q_learning_feature_selection(
-    X, y,
-    learning_rate=0.8,
-    discount_factor=0.95,
-    episodes=100,
-    epsilon=1.0,
-    min_epsilon=0.1,
-    epsilon_decay=0.995
-):
-    n_features = X.shape[1]
-
-    # Create a Q-table with rows as states (possible feature combinations)
-    # and columns as actions (features to select or stop)
-    Q_table = np.zeros((2**n_features, n_features + 1))
-
-    def state_to_index(state):
-        return int("".join(map(str, state.astype(int))), 2)
-
-    rewards = []
-
-    for _ in range(episodes):
-        # For each episode, start with an empty feature set
-        state = np.zeros(n_features, dtype=int)
-        total_reward = 0
-
-        for _ in range(n_features):
-            state_idx = state_to_index(state)
-
-            # Choose actions based on an epsilon-greedy policy
-            if np.random.uniform(0, 1) < epsilon:
-                action = np.random.choice(np.where(state == 0)[0].tolist() + [n_features])  # Select a feature or stop
-            else:
-                action = np.argmax(Q_table[state_idx, :])
-
-            if action == n_features:  # Stop action
-                break
-
-            # Update the state
-            state[action] = 1
-            selected_features = np.where(state == 1)[0]
-
-            # Train and evaluate model
-            X_train, X_test, y_train, y_test = train_test_split(X[:, selected_features], y, test_size=0.3, random_state=42)
-            model = RandomForestClassifier(random_state=42)
-            model.fit(X_train, y_train)
-            
-            accuracy = accuracy_score(y_test, model.predict(X_test))
-
-            # Reward after evaluating the classification model with the
-            # selected features and penalize based on the number of features
-            reward = accuracy - 0.01 * len(selected_features)
-
-            next_state_idx = state_to_index(state)
-            # Update the Q-table using the Q-learning equation
-            Q_table[state_idx, action] += learning_rate * (
-                reward + discount_factor * np.max(Q_table[next_state_idx, :]) - Q_table[state_idx, action]
-            )
-
-            total_reward += reward
-
-        # Decay epsilon
-        epsilon = max(min_epsilon, epsilon * epsilon_decay)
-
-        rewards.append(total_reward)
-
-    return Q_table, rewards
