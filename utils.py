@@ -560,10 +560,18 @@ def decision_tree_grid_search(X_data, y_data, params, generate_tree=False):
         return graph
 
 
-# Define helper functions
+# Transform a state to an index of the q-table
 def state_to_index(state):
     return int("".join(map(str, state.astype(int))), 2)
 
+
+# Transform an index of the q-table to a state
+def index_to_state(index, n_features):
+    # Convert the index to a binary string and pad it to have n_features bits
+    binary_state = bin(index)[2:].zfill(n_features)
+    state = np.array([int(bit) for bit in binary_state])
+
+    return state
 
 # Evaluate the selected features using a Random Forest model
 def evaluate_features(selected_features, penalty, X_train, X_val, y_train, y_val):
