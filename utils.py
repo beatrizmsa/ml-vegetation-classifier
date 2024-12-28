@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import seaborn as sns
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 from sklearn.calibration import LabelEncoder
 from sklearn.discriminant_analysis import StandardScaler
@@ -574,8 +575,7 @@ def index_to_state(index, n_features):
     return state
 
 # Evaluate the selected features using a Random Forest model
-def evaluate_features(selected_features, penalty, X_train, X_val, y_train, y_val):
-    
+def evaluate_features_random_forest(selected_features, penalty, X_train, X_val, y_train, y_val):
     # Check if at least one feature is selected
     if len(selected_features) == 0:
         return 0
@@ -594,7 +594,31 @@ def evaluate_features(selected_features, penalty, X_train, X_val, y_train, y_val
     training_accuracy = accuracy_score(y_train, y_train_pred)
     testing_accuracy = accuracy_score(y_val, y_pred)
     
-    print(f"Training accuracy: {training_accuracy:.4f}, Testing accuracy: {testing_accuracy:.4f}")
+    # Testing if the model is overfitting to apply a penalty
+    if training_accuracy >= 0.99 or training_accuracy - testing_accuracy >= 0.10:
+        return penalty
+    
+    return testing_accuracy
+
+
+def evaluate_features_logistic_regression(selected_features, penalty, X_train, X_val, y_train, y_val):
+    # Check if at least one feature is selected
+    if len(selected_features) == 0:
+        return 0
+
+    # Select features
+    X_train_fs = X_train[:, selected_features]
+    X_val_fs = X_val[:, selected_features]
+    
+    # Train and evaluate the model
+    model = LogisticRegression()
+    model.fit(X_train_fs, y_train)
+    y_pred = model.predict(X_val_fs)
+    y_train_pred = model.predict(X_train_fs)
+    
+    # Get the training and testing accuracies
+    training_accuracy = accuracy_score(y_train, y_train_pred)
+    testing_accuracy = accuracy_score(y_val, y_pred)
     
     # Testing if the model is overfitting to apply a penalty
     if training_accuracy >= 0.99 or training_accuracy - testing_accuracy >= 0.10:
