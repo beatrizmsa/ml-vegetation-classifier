@@ -577,7 +577,7 @@ def evaluate_features(selected_features, penalty, X_train, X_val, y_train, y_val
     X_val_fs = X_val[:, selected_features]
     
     # Train and evaluate the model
-    model = RandomForestClassifier(random_state=42, max_depth=14, n_estimators=100, max_features="sqrt", max_leaf_nodes=200)
+    model = RandomForestClassifier(random_state=42, max_depth=13, n_estimators=50, max_features="sqrt", max_leaf_nodes=100)
     model.fit(X_train_fs, y_train)
     y_pred = model.predict(X_val_fs)
     y_train_pred = model.predict(X_train_fs)
@@ -589,7 +589,7 @@ def evaluate_features(selected_features, penalty, X_train, X_val, y_train, y_val
     print(f"Training accuracy: {training_accuracy:.4f}, Testing accuracy: {testing_accuracy:.4f}")
     
     # Testing if the model is overfitting to apply a penalty
-    if training_accuracy >= 0.99 or training_accuracy - testing_accuracy >= 0.15:
+    if training_accuracy >= 0.99 or training_accuracy - testing_accuracy >= 0.10:
         return penalty
     
     return testing_accuracy
