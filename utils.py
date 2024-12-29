@@ -509,6 +509,13 @@ def best_random_forest(X_train, y_train, param_rfm):
     rfm_gs.fit(X_train, y_train)
     print("Best parameters", rfm_gs.best_params_)
 
+def best_decision_tree(X_train, y_train, param_dt):
+    dt = DecisionTreeClassifier(random_state=42)
+
+    dt_gs = GridSearchCV(dt, param_dt, cv=5, scoring='accuracy')
+    dt_gs.fit(X_train, y_train)
+    print("Best parameters", dt_gs.best_params_)
+
 def decision_tree(X_data, y_data):
     dt = DecisionTreeClassifier(random_state=42)
 
